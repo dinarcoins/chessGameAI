@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chess Game</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <link
+      href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css"
+      integrity="sha512-Kc323vGBEqzTmouAECnVceyQqyqdsSiqLQISBL29aUW4U/M7pSPA/gEUZQqv1cwx4OnYxTxve5UMg5GT6L4JJg=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+  </head>
+  <body class="wrapper text-center">
+    <div id="notification-container"></div>
+    <div id="confirmModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <p id="confirmMessage">Bạn có chắc chắn muốn tiếp tục?</p>
+        <button id="btnConfirmAction" class="button-55">Có</button>
+        <button id="btnCancelAction" class="button-55">Không</button>
+      </div>
+    </div>
+
+    <div id="menu" class="mx-auto">
+      <h1
+        id="displayTitle"
+        class="text-4xl text-center whitespace-nowrap font-bold text-white"
+      >
+        Welcome to Chess
+      </h1>
+      <input
+        type="text"
+        id="playerName"
+        placeholder="Tên người chơi"
+        class="inputName"
+      />
+      <button id="btnPlayWithHuman" class="button-55" disabled>
+        Chơi với Người
+      </button>
+      <button id="btnPlayWithAI" class="button-55">Chơi với AI</button>
+    </div>
+
+    <div id="game" class="game-container mx-auto" style="display: none">
+      <div id="turn-indicator" class="text-white">
+        <span id="status"></span>
+      </div>
+      <div id="chessboard"></div>
+      <div class="controls">
+        <button id="btnUnMove" class="button-55">Hoàn tác</button>
+        <button id="btnBackToMenu" class="button-55">Về menu</button>
+        <button id="resetGame" class="button-55">Reset Game</button>
+      </div>
+    </div>
+
+    <!-- <div id="chessboard"></div> -->
+
+    <!-- <div id="status"></div> -->
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.2/chess.js"></script>
+    <script src="./script.js"></script>
+  </body>
+</html>
