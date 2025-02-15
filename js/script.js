@@ -195,6 +195,12 @@ function updateStatus() {
       statusMessage = game.turn() === "w" ? "White to move" : "Black to move";
   }
   statusElement.textContent = statusMessage;
+  // checking lịch sử để disable button Hoàn Tác
+  if (game.history().length > 0) {
+    btnUnMove.disabled = false;
+  } else {
+    btnUnMove.disabled = true;
+  }
 }
 
 // Hàm để reset game
