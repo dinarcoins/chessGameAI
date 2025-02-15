@@ -1,3 +1,5 @@
+import { PIECE_SQUARE_TABLES } from "./constants.js";
+
 // Khởi tạo game cờ vua
 var game = new Chess();
 
@@ -59,8 +61,8 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   btnResetGame.addEventListener("click", function () {
-    resetGame();
-    showNotification("success", "Đã reset game!");
+    showConfirm("Bạn có chắc chắn muốn về menu chính?", resetGame());
+    // showNotification("success", "Đã reset game!");
   });
 
   btnUnMove.addEventListener("click", function () {
@@ -114,7 +116,7 @@ function showNotification(status, message) {
 
 function startGame() {
   console.log("startGame");
-  playerName = document.getElementById("playerName").value.trim();
+  var playerName = document.getElementById("playerName").value.trim();
   if (playerName === "") {
     showNotification("error", "Hãy cho tại hạ biết danh của tác hạ!");
     return;
@@ -239,19 +241,34 @@ function handleSquareClick(square) {
 }
 
 // Hàm để cập nhật trạng thái game
+
 function updateStatus() {
-  if (game.in_checkmate()) {
-    statusElement.textContent =
-      "Checkmate! " + (game.turn() === "w" ? "Black wins!" : "White wins!");
-  } else if (game.in_draw()) {
-    statusElement.textContent = "Draw!";
-  } else if (game.in_check()) {
-    statusElement.textContent = "King in check! ";
-    showNotification("warning", "King is check!");
-  } else {
-    statusElement.textContent =
-      game.turn() === "w" ? "White to move" : "Black to move";
+  var statusMessage = "";
+
+  switch (true) {
+    case game.in_checkmate():
+      statusMessage.textContent =
+        "Checkmate! " + (game.turn() === "w" ? "Black wins!" : "White wins!");
+      break;
+
+    case game.in_stalemate():
+      statusMessage = "Stalemate! Trận đấu hòa do không còn nước đi hợp lệ.";
+      break;
+
+    case game.in_draw():
+      statusMessage = "Draw! Trận đấu kết thúc với tỷ số hòa.";
+      break;
+
+    case game.in_check():
+      statusMessage = "King in check!";
+      showNotification("warning", "King is check!");
+      break;
+
+    default:
+      statusMessage = game.turn() === "w" ? "White" : "Black" + " to move";
   }
+
+  statusElement.textContent = statusMessage;
 }
 
 // Hàm để reset game
@@ -273,106 +290,290 @@ function undoLastMove() {
 }
 
 // ------------------ Hàm để AI thực hiện nước đi ------------------ //
-// function makeAIMove() {
-//   var moves = game.moves();
-//   var randomMove = moves[Math.floor(Math.random() * moves.length)];
-//   game.move(randomMove);
-//   drawBoard();
-//   updateStatus();
-// }
 
 function makeAIMove() {
-  var bestMove = minimax(game, 4, true, -Infinity, Infinity).move;
+  var bestMove = minimax(game, 5, true, -Infinity, Infinity).move;
   if (bestMove) {
     game.move(bestMove);
     drawBoard();
     updateStatus();
-
   }
 }
 
+// ------------------ Các hàm hỗ trợ mới ------------------ //
+
+// Bảng điểm vị trí cho các quân (Ví dụ cho quân Trắng, đảo ngược cho quân Đen)
+
+// Xác định giai đoạn game (0 = khai cuộc, 1 = trung cuộc, 2 = tàn cuộc)
+function getGamePhase(game) {
+  const pieceCount = game
+    .fen()
+    .split(" ")[0]
+    .replace(/[^a-z]/gi, "").length;
+  if (pieceCount > 24) return 0;
+  if (pieceCount > 12) return 1;
+  return 2;
+}
+
+// Tính điểm kiểm soát trung tâm
+function evaluateCenterControl(game, color) {
+  const centerSquares = ["d4", "e4", "d5", "e5"];
+  let control = 0;
+  centerSquares.forEach((sq) => {
+    const piece = game.get(sq);
+    if (piece && piece.color === color) control += 1;
+  });
+  return control * 3;
+}
+
+// Đánh giá an toàn của Vua
+function evaluateKingSafety(game, color) {
+  const kingSquare = game
+    .board()
+    .flat()
+    .find((p) => p && p.type === "k" && p.color === color);
+  if (!kingSquare) return 0;
+
+  // Đếm số quân bảo vệ xung quanh Vua
+  let safety = 0;
+  const directions = [
+    [-1, -1],
+    [-1, 0],
+    [-1, 1],
+    [0, -1],
+    [0, 1],
+    [1, -1],
+    [1, 0],
+    [1, 1],
+  ];
+  directions.forEach(([dx, dy]) => {
+    const x = kingSquare.col + dx;
+    const y = kingSquare.row + dy;
+    if (x >= 0 && x < 8 && y >= 0 && y < 8) {
+      const piece = game.board()[y][x];
+      if (piece && piece.color === color) safety += 1;
+    }
+  });
+  return safety * 2;
+}
+
+// Đánh giá cấu trúc Tốt
+function evaluatePawnStructure(game, color) {
+  let score = 0;
+  const pawns = [];
+
+  // Tìm tất cả tốt
+  game.board().forEach((row, y) => {
+    row.forEach((piece, x) => {
+      if (piece && piece.type === "p" && piece.color === color) {
+        pawns.push({ x, y });
+      }
+    });
+  });
+
+  // Kiểm tra tốt cô lập và liền nhau
+  pawns.forEach((pawn) => {
+    const hasAdjacent = pawns.some(
+      (p) => Math.abs(p.x - pawn.x) === 1 && p.y === pawn.y
+    );
+    if (!hasAdjacent) score -= 1; // Tốt cô lập
+  });
+
+  return score;
+}
+
+// ------------------ Cải tiến hàm evaluateBoard ------------------ //
+function evaluateBoard(game) {
+  let evaluation = 0;
+  const phase = getGamePhase(game);
+
+  // Duyệt qua tất cả ô cờ
+  game.board().forEach((row, y) => {
+    row.forEach((piece, x) => {
+      if (!piece) return;
+
+      // Giá trị cơ bản của quân
+      const pieceValue = getPieceValue(piece.type);
+      const sign = piece.color === "w" ? 1 : -1;
+
+      // Giá trị vị trí
+      let positionValue = 0;
+      if (PIECE_SQUARE_TABLES[piece.type.toUpperCase()]) {
+        const table = PIECE_SQUARE_TABLES[piece.type.toUpperCase()];
+        const row = piece.color === "w" ? 7 - y : y;
+        positionValue = table[row][x] || 0;
+      }
+
+      evaluation +=
+        sign * (pieceValue + positionValue * (phase === 2 ? 0.5 : 1));
+    });
+  });
+
+  // Thêm các yếu tố phụ
+  evaluation +=
+    evaluateCenterControl(game, "w") - evaluateCenterControl(game, "b");
+  evaluation += evaluateKingSafety(game, "w") - evaluateKingSafety(game, "b");
+  evaluation +=
+    evaluatePawnStructure(game, "w") - evaluatePawnStructure(game, "b");
+
+  return evaluation;
+}
+
+// ------------------ Cải tiến minimax với move ordering ------------------ //
 function minimax(game, depth, isMaximizingPlayer, alpha, beta) {
   if (depth === 0 || game.game_over()) {
     return { move: null, evaluation: evaluateBoard(game) };
   }
 
-  var moves = game.moves({ verbose: true });
+  const moves = game.moves({ verbose: true });
 
-  // Ưu tiên ăn quân địch (sắp xếp theo giá trị quân cờ)
+  // Sắp xếp nước đi theo heuristic
   moves.sort((a, b) => {
-    let valueA = a.captured ? getPieceValue(a.captured) : 0;
-    let valueB = b.captured ? getPieceValue(b.captured) : 0;
-    return valueB - valueA; // Nước đi nào ăn quân có giá trị cao hơn sẽ được ưu tiên
+    // Ưu tiên ăn quân có giá trị cao
+    const captureDiff =
+      (getPieceValue(b.captured) || 0) - (getPieceValue(a.captured) || 0);
+    if (captureDiff !== 0) return captureDiff;
+
+    // Ưu tiên chiếu
+    if (a.san.includes("+")) return -1;
+    if (b.san.includes("+")) return 1;
+
+    // Ưu tiên phong cấp
+    if (a.promotion) return -1;
+    if (b.promotion) return 1;
+
+    return 0;
   });
 
-  var bestMove = null;
-  if (isMaximizingPlayer) {
-    let maxEval = -Infinity;
-    for (let move of moves) {
-      game.move(move);
-      let evaluation = minimax(game, depth - 1, false, alpha, beta).evaluation;
-      game.undo();
+  let bestMove = null;
+  let bestValue = isMaximizingPlayer ? -Infinity : Infinity;
 
-      if (evaluation > maxEval) {
-        maxEval = evaluation;
+  for (const move of moves) {
+    game.move(move);
+    const result = minimax(game, depth - 1, !isMaximizingPlayer, alpha, beta);
+    game.undo();
+
+    if (isMaximizingPlayer) {
+      if (result.evaluation > bestValue) {
+        bestValue = result.evaluation;
         bestMove = move;
       }
-
-      alpha = Math.max(alpha, evaluation);
-      if (beta <= alpha) break; // Cắt tỉa Alpha-Beta
-    }
-    return { move: bestMove, evaluation: maxEval };
-  } else {
-    let minEval = Infinity;
-    for (let move of moves) {
-      game.move(move);
-      let evaluation = minimax(game, depth - 1, true, alpha, beta).evaluation;
-      game.undo();
-
-      if (evaluation < minEval) {
-        minEval = evaluation;
+      alpha = Math.max(alpha, bestValue);
+    } else {
+      if (result.evaluation < bestValue) {
+        bestValue = result.evaluation;
         bestMove = move;
       }
-
-      beta = Math.min(beta, evaluation);
-      if (beta <= alpha) break; // Cắt tỉa Alpha-Beta
+      beta = Math.min(beta, bestValue);
     }
-    return { move: bestMove, evaluation: minEval };
+
+    if (beta <= alpha) break;
   }
+
+  return { move: bestMove, evaluation: bestValue };
 }
 
-function getPieceValue(piece) {
-  var values = { p: 1, r: 5, n: 3, b: 3, q: 9, k: 100 };
-  return values[piece.toLowerCase()] || 0; // Trả về giá trị quân cờ, mặc định 0 nếu không có
-}
-
-function evaluateBoard(game) {
-  var pieceValues = {
-    p: -1,
-    r: -5,
-    n: -3,
-    b: -3,
-    q: -9,
-    k: -100,
+// ------------------ Hàm getPieceValue cập nhật ------------------ //
+function getPieceValue(pieceType) {
+  const values = {
+    p: 1,
+    n: 3,
+    b: 3.2,
+    r: 5,
+    q: 9,
+    k: 0, // Vua không có giá trị
     P: 1,
-    R: 5,
     N: 3,
-    B: 3,
+    B: 3.2,
+    R: 5,
     Q: 9,
-    K: 100,
+    K: 0,
   };
-
-  var board = game.fen().split(" ")[0]; // Lấy trạng thái bàn cờ từ FEN
-  var evaluation = 0;
-
-  for (var char of board) {
-    if (pieceValues[char]) {
-      evaluation += pieceValues[char];
-    }
-  }
-
-  return evaluation;
+  return values[pieceType] || 0;
 }
+
+// function minimax(game, depth, isMaximizingPlayer, alpha, beta) {
+//   if (depth === 0 || game.game_over()) {
+//     return { move: null, evaluation: evaluateBoard(game) };
+//   }
+
+//   var moves = game.moves({ verbose: true });
+
+//   // Ưu tiên ăn quân địch (sắp xếp theo giá trị quân cờ)
+//   moves.sort((a, b) => {
+//     let valueA = a.captured ? getPieceValue(a.captured) : 0;
+//     let valueB = b.captured ? getPieceValue(b.captured) : 0;
+//     return valueB - valueA; // Nước đi nào ăn quân có giá trị cao hơn sẽ được ưu tiên
+//   });
+
+//   var bestMove = null;
+//   if (isMaximizingPlayer) {
+//     let maxEval = -Infinity;
+//     for (let move of moves) {
+//       game.move(move);
+//       let evaluation = minimax(game, depth - 1, false, alpha, beta).evaluation;
+//       game.undo();
+
+//       if (evaluation > maxEval) {
+//         maxEval = evaluation;
+//         bestMove = move;
+//       }
+
+//       alpha = Math.max(alpha, evaluation);
+//       if (beta <= alpha) break; // Cắt tỉa Alpha-Beta
+//     }
+//     return { move: bestMove, evaluation: maxEval };
+//   } else {
+//     let minEval = Infinity;
+//     for (let move of moves) {
+//       game.move(move);
+//       let evaluation = minimax(game, depth - 1, true, alpha, beta).evaluation;
+//       game.undo();
+
+//       if (evaluation < minEval) {
+//         minEval = evaluation;
+//         bestMove = move;
+//       }
+
+//       beta = Math.min(beta, evaluation);
+//       if (beta <= alpha) break; // Cắt tỉa Alpha-Beta
+//     }
+//     return { move: bestMove, evaluation: minEval };
+//   }
+// }
+
+// function getPieceValue(piece) {
+//   var values = { p: 1, r: 5, n: 3, b: 3, q: 9, k: 100 };
+//   return values[piece.toLowerCase()] || 0; // Trả về giá trị quân cờ, mặc định 0 nếu không có
+// }
+
+// function evaluateBoard(game) {
+//   var pieceValues = {
+//     p: -1,
+//     r: -5,
+//     n: -3,
+//     b: -3,
+//     q: -9,
+//     k: -100,
+//     P: 1,
+//     R: 5,
+//     N: 3,
+//     B: 3,
+//     Q: 9,
+//     K: 100,
+//   };
+
+//   var board = game.fen().split(" ")[0]; // Lấy trạng thái bàn cờ từ FEN
+//   var evaluation = 0;
+
+//   for (var char of board) {
+//     if (pieceValues[char]) {
+//       evaluation += pieceValues[char];
+//     }
+//   }
+
+//   return evaluation;
+// }
 
 // Khởi tạo bàn cờ ban đầu
 drawBoard();

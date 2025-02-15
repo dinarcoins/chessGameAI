@@ -49,7 +49,7 @@
 
     <div id="game" class="game-container mx-auto" style="display: none">
       <div id="turn-indicator" class="text-white">
-        <span id="status"></span>
+        <div id="status"></div>
       </div>
       <div id="chessboard"></div>
       <div class="controls">
@@ -59,7 +59,16 @@
       </div>
     </div>
 
+    <footer class="footer">
+      <p class="text-sm whitespace-nowrap uppercase">
+        Make by DinarCoins - &copy; From I&E Vietnam
+      </p>
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.2/chess.js"></script>
-    <script src="./script.js"></script>
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script> -->
+    <script type="module" src="./constants.js"></script>
+    <script type="module" src="./script.js"></script>
   </body>
 </html>
