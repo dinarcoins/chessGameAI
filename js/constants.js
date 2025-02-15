@@ -134,3 +134,18 @@ export var PIECE_SQUARE_TABLES = {
     [2, 1, 1, 1, 1, 1, 1, 2],
   ],
 };
+
+export var pieceImages = {
+  "♙": "./img/pawnWhite.png",
+  "♖": "./img/rookWhite.png",
+  "♘": "./img/knightWhite.png",
+  "♗": "./img/bishopWhite.png",
+  "♕": "./img/queenWhite.png",
+  "♔": "./img/kingWhite.png",
+  "♟": "./img/pawnBlack.png",
+  "♜": "./img/rookBlack.png",
+  "♞": "./img/knightBlack.png",
+  "♝": "./img/bishopBlack.png",
+  "♛": "./img/queenBlack.png",
+  "♚": "./img/kingBlack.png",
+};
