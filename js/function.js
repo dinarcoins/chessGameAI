@@ -73,5 +73,17 @@ export function startGame() {
     return;
   }
   document.getElementById("menu").style.display = "none";
-  document.getElementById("game").style.display = "block";
+  document.getElementById("game").style.display = "flex";
+}
+
+export function getCapturedPieces(game) {
+  let capturedPieces = [];
+  
+  game.history({ verbose: true }).forEach(move => {
+    if (move.captured) {
+      capturedPieces.push({ piece: move.captured, color: move.color === "w" ? "b" : "w" });
+    }
+  });
+
+  return capturedPieces;
 }

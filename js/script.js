@@ -5,6 +5,7 @@ import {
   getPieceValue,
   backToMenu,
   startGame,
+  getCapturedPieces,
 } from "./function.js";
 import { minimax } from "./botAI.js";
 
@@ -56,8 +57,7 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   btnResetGame.addEventListener("click", function () {
-    showConfirm("Bạn có chắc chắn muốn về menu chính?", resetGame());
-    // showNotification("success", "Đã reset game!");
+    showConfirm("Bạn có chắc chắn muốn reset game?", resetGame);
   });
 
   btnUnMove.addEventListener("click", function () {
@@ -75,7 +75,6 @@ function confirmAction(confirm) {
   document.getElementById("confirmModal").style.display = "none";
   if (confirm && confirmCallback) {
     confirmCallback();
-    resetGame();
   }
 }
 
@@ -170,37 +169,55 @@ function handleSquareClick(square) {
   }
 }
 
+// Hàm cập nhật danh sách quân cờ bị ăn
+function updateCapturedPieces() {
+  const capturedPieces = getCapturedPieces(game);
+  const whiteCaptured = document.getElementById("whiteCaptured");
+  const blackCaptured = document.getElementById("blackCaptured");
+
+  whiteCaptured.innerHTML = "";
+  blackCaptured.innerHTML = "";
+
+  capturedPieces.forEach(({ piece, color }) => {
+    const img = document.createElement("img");
+    img.src = pieceImages[getPieceSymbol({ type: piece, color })];
+    img.classList.add("captured-piece");
+
+    if (color === "w") {
+      blackCaptured.appendChild(img); // Quân trắng bị ăn -> hiện ở danh sách của đen
+    } else {
+      whiteCaptured.appendChild(img); // Quân đen bị ăn -> hiện ở danh sách của trắng
+    }
+  });
+}
+
 // Hàm để cập nhật trạng thái game
 function updateStatus() {
   var statusMessage = "";
-  switch (true || "") {
-    case game.in_checkmate():
-      statusMessage.textContent =
-        "Checkmate! " + (game.turn() === "w" ? "Black wins!" : "White wins!");
-      break;
-    case game.in_stalemate():
-      statusMessage = "Stalemate! Trận đấu hòa do không còn nước đi hợp lệ.";
-      break;
 
-    case game.in_draw():
-      statusMessage = "Draw! Trận đấu kết thúc với tỷ số hòa.";
-      break;
-
-    case game.in_check():
-      statusMessage = "King in check!";
-      showNotification("warning", "King is check!");
-      break;
-
-    default:
-      statusMessage = game.turn() === "w" ? "White to move" : "Black to move";
-  }
-  statusElement.textContent = statusMessage;
-  // checking lịch sử để disable button Hoàn Tác
-  if (game.history().length > 0) {
-    btnUnMove.disabled = false;
+  // Kiểm tra các trường hợp cờ
+  if (game.in_checkmate()) {
+    statusMessage =
+      "Checkmate! " + (game.turn() === "w" ? "Black wins!" : "White wins!");
+  } else if (game.in_stalemate()) {
+    statusMessage = "Stalemate! Trận đấu hòa do không còn nước đi hợp lệ.";
+  } else if (game.in_draw()) {
+    statusMessage = "Draw! Trận đấu kết thúc với tỷ số hòa.";
+  } else if (game.in_check()) {
+    statusMessage = game.turn() === "w" ? "White king in check!" : "Black king in check!";
+    showNotification("warning", "King is in check!");
   } else {
-    btnUnMove.disabled = true;
+    statusMessage = game.turn() === "w" ? "White to move" : "Black to move";
   }
+
+  // Hiển thị thông báo trạng thái
+  statusElement.textContent = statusMessage || "Hết cờ =))";
+
+  // Kiểm tra lịch sử để vô hiệu hóa nút "Hoàn Tác"
+  btnUnMove.disabled = game.history().length === 0;
+
+  // Cập nhật danh sách quân cờ bị ăn
+  updateCapturedPieces();
 }
 
 // Hàm để reset game

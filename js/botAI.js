@@ -6,6 +6,7 @@ function evaluateBoard(game) {
   let evaluation = 0;
   const phase = getGamePhase(game);
   const boardRows = game.fen().split(" ")[0].split("/");
+  // console.log("game.fen()", game.make_move());
 
   boardRows.forEach((row, y) => {
     let x = 0;
@@ -153,18 +154,46 @@ function evaluatePawnStructure(game, color) {
 }
 
 // ------------------ Cải tiến minimax với move ordering ------------------ //
+function evaluateBoardAfterMove(game, move) {
+  game.move(move);
+  const totalValue = getTotalPieceValue(game, game.turn() === "w" ? "b" : "w");
+  game.undo();
+  return totalValue;
+}
+
+function getTotalPieceValue(game, color) {
+  let total = 0;
+  const boardRows = game.fen().split(" ")[0].split("/");
+
+  boardRows.forEach((row, y) => {
+    let x = 0;
+    for (let char of row) {
+      if (!isNaN(char)) {
+        x += parseInt(char);
+      } else {
+        let squareName = String.fromCharCode(97 + x) + (8 - y);
+        let piece = game.get(squareName);
+        if (piece && piece.color === color) {
+          total += getPieceValue(piece.type);
+        }
+        x++;
+      }
+    }
+  });
+
+  return total;
+}
+
 export function minimax(game, depth, isMaximizingPlayer, alpha, beta) {
   if (depth === 0 || game.game_over()) {
     return { move: null, evaluation: evaluateBoard(game) };
   }
 
-  const moves = game.moves({ verbose: true });
+  let moves = game.moves({ verbose: true });
 
-  // Sắp xếp nước đi theo heuristic
+  // Sắp xếp nước đi theo chiến lược tối ưu
   moves.sort((a, b) => {
-    // Ưu tiên ăn quân có giá trị cao
-    const captureDiff =
-      (getPieceValue(b.captured) || 0) - (getPieceValue(a.captured) || 0);
+    const captureDiff = (getPieceValue(b.captured) || 0) - (getPieceValue(a.captured) || 0);
     if (captureDiff !== 0) return captureDiff;
 
     // Ưu tiên chiếu
@@ -175,7 +204,10 @@ export function minimax(game, depth, isMaximizingPlayer, alpha, beta) {
     if (a.promotion) return -1;
     if (b.promotion) return 1;
 
-    return 0;
+    // Ưu tiên nước đi làm giảm tổng giá trị quân đối thủ
+    const valueA = evaluateBoardAfterMove(game, a);
+    const valueB = evaluateBoardAfterMove(game, b);
+    return valueB - valueA;
   });
 
   let bestMove = null;

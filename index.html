@@ -3,8 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      property="og:image"
+      content="https://inevn.com/inevo/thumbnail2.png"
+    />
     <title>Chess Game</title>
-    <link rel="stylesheet" href="./styles.css" />
     <link rel="shortcut icon" href="./img/favicon.ico" type="image/x-icon" />
     <link
       href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
@@ -17,8 +20,18 @@
       crossorigin="anonymous"
       referrerpolicy="no-referrer"
     />
+    <link
+      rel="stylesheet"
+      href="https://thuctap.inevn.com/nguyendinhhuy/css/include.sub.css"
+    />
+
+    <script src="https://code.jquery.com/jquery-3.6.3.js"></script>
+    <script src="https://cdn.inevn.com/js/jquery.main.isj"></script>
+    <script src="https://cdn.inevn.com/js/include.core.isj"></script>
+
+    <link rel="stylesheet" href="./styles.css" />
   </head>
-  <body class="wrapper text-center">
+  <body class="oxh wrapper text-center" style="scroll-behavior: smooth">
     <div id="notification-container"></div>
     <div id="confirmModal" class="modal" style="display: none">
       <div class="modal-content">
@@ -28,7 +41,7 @@
       </div>
     </div>
 
-    <div id="modalWinner" class="modal" style="display: none">
+    <div class="modal" style="display: none">
       <div class="modal-content">
         <p id="confirmMessage">Bạn có chắc chắn muốn tiếp tục?</p>
         <button id="btnConfirmAction" class="button-55">Có</button>
@@ -55,21 +68,31 @@
       <button id="btnPlayWithAI" class="button-55">Chơi với AI</button>
     </div>
 
-    <div id="game" class="game-container mx-auto" style="display: none">
-      <div id="turn-indicator" class="text-white">
-        <div id="status"></div>
-      </div>
+    <div id="game" class="game-container mx-auto" >
       <div id="chessboard"></div>
-      <div class="controls">
-        <button id="btnUnMove" class="button-55">Hoàn tác</button>
-        <button id="btnBackToMenu" class="button-55">Về menu</button>
-        <button id="resetGame" class="button-55">Reset Game</button>
+      <div id="total-container">
+        <div id="turn-indicator" class="text-white">
+          <div id="status"></div>
+        </div>
+        <div class="controls">
+          <button id="btnUnMove" class="button-55">Hoàn tác</button>
+          <button id="btnBackToMenu" class="button-55">Về menu</button>
+          <button id="resetGame" class="button-55">Reset Game</button>
+        </div>
+        <div class="captured-container">
+          <div class="captured-box">
+            <div id="whiteCaptured" class="captured-pieces"></div>
+          </div>
+          <div class="captured-box">
+            <div id="blackCaptured" class="captured-pieces"></div>
+          </div>
+        </div>
       </div>
     </div>
 
     <footer class="footer">
       <p class="text-sm whitespace-nowrap uppercase">
-        Make by DinarCoins - &copy; From I&E Vietnam
+        &copy;Make by DinarCoins - From I&E Vietnam
       </p>
     </footer>
 
@@ -78,6 +101,7 @@
     <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script> -->
     <script type="module" src="./js/constants.js"></script>
     <script type="module" src="./js/function.js"></script>
+    <script type="module" src="./js/DB.js"></script>
     <script type="module" src="./js/script.js"></script>
   </body>
 </html>
